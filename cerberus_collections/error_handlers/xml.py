@@ -84,18 +84,18 @@ class Decoder:
         Supports almost all builtin types as well as :class:`datetime.date`
         and :class:`datetime.datetime`.
 
-        Instances are callable as proxy to :meth:`Dencoder.decode`.
+        Instances are callable as proxy to :meth:`Decoder.decode`.
     """
     @classmethod
     def decode(cls, element):
         """ Decodes an xml representation according to the elements's type
             attribute to a Python object.
 
-            :param tag: The tag of the resulting element, usually a variable
-                        name or descriptor.
-            :type tag: :class:`str`
-            :param value: The value to encode.
-            :type value: Any :class:`object`.
+            :param element: The XML representation to decode, must have a
+                            ``type``-attribute that is used to lookup the
+                            needed decoding method.
+            :type element: :class:`lxml._Element`
+            :returns: The decoded object.
         """
         value_type = element.attrib['type']
         decoder = getattr(cls, '_decode_' + value_type, None)
@@ -178,12 +178,15 @@ class Decoder:
         return tuple(cls._decode_list(element))
 
 
+default_encoder, default_decoder = Encoder(), Decoder()
+
+
 def element_from_error(error, encoder):
     """ Makes an XML element representing a validation error.
 
         :param error: The error to encode.
         :type error: :class:`~cerberus.errors.ValidationError`
-        :param encoder: An encoder class.
+        :param encoder: An encoder instance.
         :type encoder: Something alike :class:`Encoder`.
         :returns: An XML representation of the given error including childerrors.
         :rtype: :class:`lxml._Element`
@@ -222,7 +225,7 @@ def error_from_element(element, decoder):
 
         :param error: The XML element to transform.
         :type error: :class:`lxml._Element`
-        :param decoder: An decoder class.
+        :param decoder: An decoder instance.
         :type decoder: Something alike :class:`Decoder`.
         :returns: A validation error object.
         :rtype: :class:`~cerberus.errors.ValidationError`
@@ -277,13 +280,13 @@ class XMLErrorHandler(BaseErrorHandler):
         :type document_id: str
         :param schema_id: An id that refers the used validation schema.
         :type schema_id: str
-        :param encoder: Something alike :class:`Encoder`.
-        :param decoder: Something alike :class:`Decoder`.
+        :param encoder: An instance of something alike :class:`Encoder`.
+        :param decoder: An instance of something alike :class:`Decoder`.
     """
     # TODO add compress option
     def __init__(self, buffer=None, prettify=False, encoding='utf-8',
                  consider_context=False, document_id=None, schema_id=None,
-                 encoder=Encoder(), decoder=Decoder()):
+                 encoder=default_encoder, decoder=default_decoder):
         self.buffer = buffer
         self.prettify = prettify
         self.encoding = encoding
