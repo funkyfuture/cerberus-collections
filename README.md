@@ -1,14 +1,22 @@
 # cerberus-collections
 
-Extensions for [cerberus](http://python-cerberus.org), a lightweight and extensible data validation library for Python.
+[Cerberus](http://python-cerberus.org) is a lightweight and extensible data
+validation library for Python.
+
+Here are the extensions.
 
 ## Contents
+
+This package aims to provide various code pieces that add functionality for
+validations.
+
+Python 2 is not supposed to be supported, though some parts may run reliably.
 
 ### Error Handlers
 
 - `cerberus_collections.XMLErrorHandler` (requires [lxml](https://pypi.org/project/lxml/))
 
-([documentation](docs/source/error_handlers.rst))
+([documentation](https://cerberus-collections.rtfd.io/en/latest/error_handlers.html))
 
 ##### TODO
 

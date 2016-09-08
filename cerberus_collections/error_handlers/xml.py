@@ -20,8 +20,9 @@ from cerberus_collections.versions import CERBERUS_VERSION, __version__
 class Encoder:
     """ Encode Python objects to XML elements.
 
-        Supports almost all builtin types. If value has no complementing method
-        ``_encode_<type name>`` here, its string representation will be used.
+        Supports almost all builtin types. If ``value`` has no complementing
+        method ``_encode_<type name>`` here, its string representation will be
+        used.
 
         Instances are callable as proxy to :meth:`Encoder.encode`.
     """
@@ -33,7 +34,7 @@ class Encoder:
                         name or descriptor.
             :type tag: :class:`str`
             :param value: The value to encode.
-            :type value: Any :class:`object`.
+            :type value: any :class:`object`
             :rtype: :class:`lxml._Element`
         """
         value_type = type(value).__name__
@@ -95,7 +96,7 @@ class Decoder:
 
             :param element: The XML representation to decode, must have a
                             ``type``-attribute that is used to lookup the
-                            needed decoding method.
+                            decoding method ``_decode_<type name>``.
             :type element: :class:`lxml._Element`
             :returns: The decoded object.
         """
@@ -257,15 +258,18 @@ class XMLErrorHandler(BaseErrorHandler):
     """ An errorhandler that (de-)serializes cerberus validation errors to and
         from XML.
 
-        Calling an instance returns the gathered validation errors as
-        :class:`~lxml._ElementTree`. That's what happens when you get the
-        :attr:`~cerberus.Validator.errors` of a validator with this handler
-        bound as its :attr:`~cerberus.Validator.error_handler`.
+        Calling an instance without arguments returns the
+        errors that were collected during the last validation of a
+        :class:`~cerberus.Validator`, if the handler
+        was bound to its :attr:`~cerberus.Validator.error_handler` property, as
+        :class:`~lxml._ElementTree`. That's what happens when you
+        get the :attr:`~cerberus.Validator.errors` of a validator with this
+        handler bound as its :attr:`~cerberus.Validator.error_handler`.
 
         If called with a sequence of :class:`~cerberus.errors.ValidationError`
         instances as argument, the returned tree represents these.
 
-        During cerberus' validation it dumps xml via to ``buffer`` if provided.
+        During cerberus' validation it dumps xml via an ``buffer`` if provided.
 
         An instance is iterable and returns errors it reads from ``buffer``.
 
@@ -284,8 +288,10 @@ class XMLErrorHandler(BaseErrorHandler):
         :type document_id: str
         :param schema_id: An id that refers the used validation schema.
         :type schema_id: str
-        :param encoder: An instance of something alike :class:`Encoder`.
-        :param decoder: An instance of something alike :class:`Decoder`.
+        :param encoder: An instance of something alike
+                        :class:`~cerberus_collections.error_handlers.xml.Encoder`.
+        :param decoder: An instance of something alike
+                        :class:`~cerberus_collections.error_handlers.xml.Decoder`.
     """
     encoder = default_encoder
     decoder = default_decoder

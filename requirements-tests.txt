@@ -4,3 +4,4 @@ pytest
 pytest-cov
 tox
 sphinx
+sphinx_bootstrap_theme

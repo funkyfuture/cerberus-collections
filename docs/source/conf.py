@@ -22,7 +22,7 @@ import sys
 sys.path.insert(0, path.abspath(path.join(path.dirname(__file__), '..', '..')))
 
 import cerberus_collections
-
+import sphinx_bootstrap_theme
 
 from docs.source import includes
 includes.generate()
@@ -39,6 +39,7 @@ includes.generate()
 # ones.
 extensions = [
     'sphinx.ext.autodoc',
+    'sphinx.ext.doctest',
     'sphinx.ext.intersphinx',
     'sphinx.ext.todo',
     'sphinx.ext.viewcode',
@@ -124,7 +125,7 @@ pygments_style = 'sphinx'
 # keep_warnings = False
 
 # If true, `todo` and `todoList` produce output, else they produce nothing.
-todo_include_todos = True
+todo_include_todos = False
 
 
 # -- Options for HTML output ----------------------------------------------
@@ -132,16 +133,24 @@ todo_include_todos = True
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 #
-html_theme = 'alabaster'
+html_theme = 'bootstrap'
 
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
 # documentation.
 #
-# html_theme_options = {}
+html_theme_options = {
+    'navbar_links': [
+        ('Source', 'https://github.com/funkyfuture/cerberus-collections', True),
+        ('PyPI', 'https://pypi.python.org/pypi/cerberus-collections', True)
+    ],
+    'navbar_sidebarrel': False,
+    'source_link_position': 'nope',
+    'bootswatch_theme': 'flatly',
+}
 
 # Add any paths that contain custom themes here, relative to this directory.
-# html_theme_path = []
+html_theme_path = sphinx_bootstrap_theme.get_html_theme_path()
 
 # The name for this set of Sphinx documents.
 # "<project> v<release> documentation" by default.
@@ -351,6 +360,23 @@ texinfo_documents = [
 # texinfo_no_detailmenu = False
 
 
-# Example configuration for intersphinx: refer to the Python standard library.
-intersphinx_mapping = {'https://docs.python.org/': None,
+# -- Options for autodoc extension ---------------------------------------------
+
+autodoc_member_order = 'bysource'
+autodoc_default_flags = ['show-inheritance']
+
+
+# -- Options for intersphinx extension -----------------------------------------
+intersphinx_mapping = {'https://docs.python.org/3/': None,
                        'http://docs.python-cerberus.org/en/stable/': None}
+
+
+# -- Options for doctest extension ---------------------------------------------
+
+doctest_global_setup = """
+import cerberus_collections
+Validator = cerberus_collections.Validator
+validator_factory = cerberus_collections.validator_factory
+schema = {'some_field': {'type': 'number'}}
+document = {'some_field': 'some_string'}
+"""
