@@ -1,4 +1,5 @@
 from io import BytesIO
+from socket import socketpair
 import sys
 
 from cerberus.errors import ValidationError
@@ -9,23 +10,6 @@ from cerberus_collections import Validator, XMLErrorHandler
 from cerberus_collections.error_handlers.xml import ValidationContextMismatch, Encoder, Decoder, DecodingError, element_from_error
 
 from . import assert_equal_errors, sample_document, sample_schema
-
-
-def write_errors(document_id, schema_id):
-    buffer = BytesIO()
-    validator = Validator(error_handler=(XMLErrorHandler,
-                                         {'consider_context': True,
-                                          'document_id': document_id,
-                                          'schema_id': schema_id}))
-    validator(sample_document, sample_schema)
-    validator.errors.write(buffer)
-    return buffer, validator
-
-
-def read_errors(buffer, document_id, schema_id):
-    buffer.seek(0)
-    error_reader = XMLErrorHandler(document_id=document_id, schema_id=schema_id, consider_context=True)
-    return error_reader.read(buffer)
 
 
 def test_encoder():
@@ -51,6 +35,23 @@ def test_decoding_error():
         Decoder.decode(x)
 
 
+def write_errors_to_file(document_id, schema_id):
+    buffer = BytesIO()
+    validator = Validator(error_handler=(XMLErrorHandler,
+                                         {'consider_context': True,
+                                          'document_id': document_id,
+                                          'schema_id': schema_id}))
+    validator(sample_document, sample_schema)
+    validator.errors.write(buffer)
+    return buffer, validator
+
+
+def read_errors_from_file(buffer, document_id, schema_id):
+    buffer.seek(0)
+    error_reader = XMLErrorHandler(document_id=document_id, schema_id=schema_id, consider_context=True)
+    return error_reader.read(buffer)
+
+
 def test_element():
     ve1 = ValidationError(('a_field',), ('a_field', 'type'), int('24', base=16), 'type', 'string', 0, ())
     ee = element_from_error(ve1, Encoder())
@@ -66,22 +67,39 @@ def test_simple():
     validator = Validator(error_handler=XMLErrorHandler)
     validator(sample_document, sample_schema)
     sys.stdout.write(tostring(validator.errors, encoding='unicode'))
-    errors = validator.error_handler._as_string()
+    errors = str(validator.error_handler)
     parsed_errors = validator.error_handler.parse(errors)
     assert_equal_errors(validator._errors, parsed_errors)
 
 
-def test_read_errors():
-    buffer, validator = write_errors('foo', 'bar')
-    parsed_errors = read_errors(buffer, 'foo', 'bar')
+def test_read_errors_from_file():
+    buffer, validator = write_errors_to_file('foo', 'bar')
+    parsed_errors = read_errors_from_file(buffer, 'foo', 'bar')
     assert_equal_errors(validator._errors, parsed_errors)
 
-        read_errors(buffer, 'bar', 'foo')
     with raises(ValidationContextMismatch):
+        read_errors_from_file(buffer, 'bar', 'foo')
 
 
-def test_iter_errors():
-    buffer, validator = write_errors(None, None)
+def test_write_and_read_socket():
+    sender, receiver = socketpair()
+
+    validator = Validator(sample_schema)
+    validator(sample_document)
+    handler = XMLErrorHandler()
+    handler.extend(validator._errors)
+    sender.sendall(str(handler).encode())
+    sender.close()
+
+    handler = XMLErrorHandler()
+    parsed_errors = handler.read(receiver)
+    receiver.close()
+
+    assert_equal_errors(validator._errors, parsed_errors)
+
+
+def test_iter_errors_from_file():
+    buffer, validator = write_errors_to_file(None, None)
     buffer.seek(0)
     handler = XMLErrorHandler(buffer=buffer)
     parsed_errors = []
@@ -90,7 +108,7 @@ def test_iter_errors():
     assert_equal_errors(validator._errors, parsed_errors)
 
 
-def test_emit_and_iter_errors():
+def test_emit_and_iter_through_file():
     buffer = BytesIO()
     validator = Validator(sample_schema, error_handler=(XMLErrorHandler,
                                                         {'buffer': buffer,
@@ -100,3 +118,17 @@ def test_emit_and_iter_errors():
     buffer.seek(0)
     parsed_errors = [x for x in XMLErrorHandler(buffer=buffer)]
     assert_equal_errors(validator._errors, parsed_errors)
+
+
+def test_emit_and_iter_through_socket():
+    sender, receiver = socketpair()
+
+    validator = Validator(sample_schema, error_handler=XMLErrorHandler(sender))
+    validator(sample_document)
+    sender.close()
+
+    error_handler = XMLErrorHandler(receiver)
+    received_errors = [x for x in error_handler]
+    receiver.close()
+
+    assert_equal_errors(validator._errors, received_errors)

@@ -1,5 +1,7 @@
 from collections import Sequence, defaultdict
 from datetime import datetime
+from io import IOBase
+from socket import socket
 from warnings import warn
 
 from lxml.etree import Element, ElementTree, _ElementTree, iterparse
@@ -269,8 +271,10 @@ class XMLErrorHandler(BaseErrorHandler):
 
         All configuration options are accessible as instance properties.
 
-        :param buffer: A file-like object.
-        :param prettify: Prettify written xml.
+        :param buffer: An object for I/O when emitting and iterating.
+        :type buffer: :class:`io.IOBase` (like file objects),
+                      :class:`socket.socket` or :obj:`None`
+        :param prettify: Prettify rendered xml.
         :type prettify: bool
         :param encoding: Character encoding.
         :type encoding: str
@@ -308,12 +312,91 @@ class XMLErrorHandler(BaseErrorHandler):
         return self.tree
 
     def __iter__(self):
-        if self.buffer is None:
+        if self._buffer is None:
             raise RuntimeError("{} must have a 'buffer'-property set.".format(repr(self)))
-        self.__iterparser = iterparse(self.buffer, events=('start', 'end'))
+
+        elif self._buffer_type is IOBase:
+            self.__iterparser = iterparse(self._buffer, events=('start', 'end'))
+
+        elif self._buffer_type is socket:
+            buffer = b''
+            while b'>' not in buffer:
+                buffer += self._buffer.recv(1024)
+
+            if buffer.startswith(b'<errors'):
+                container_element, self.__socketbuffer = buffer.split(b'>', 1)
+                container_element += b'></errors>'
+                container_element = element_from_string(container_element)
+                self._validate_signature(container_element)
+            else:
+                warn('Opening <errors> element is missing.')
+                if not buffer.startswith(b'<error'):
+                    raise StopIteration
+
         return self
 
     def __next__(self):
+        return self.__next_from_buffer()
+
+    def __str__(self):
+        return self._as_string(self.root).decode(self.encoding)
+
+    @property
+    def buffer(self):
+        return self._buffer
+
+    @buffer.setter
+    def buffer(self, buffer):
+        if isinstance(buffer, IOBase):
+            self._buffer_type = IOBase
+            self.__next_from_buffer = self._next_from_file
+            self.__write_to_buffer = self._write_to_file
+        elif isinstance(buffer, socket):
+            self._buffer_type = socket
+            self.__next_from_buffer = self._next_from_socket
+            self.__write_to_buffer = self._write_to_socket
+        else:
+            self._buffer_type = None
+            self.__next_from_buffer = self.__nop
+            self.__write_to_buffer = self.__nop
+            if buffer is not None:
+                warn('Unknown buffer type, errors will not be emitted withot '
+                     'notice and the error handler is not iterable.')
+        self._buffer = buffer
+
+    def __nop(self, *args, **kwargs):
+        pass
+
+    def add(self, error):
+        self.root.append(element_from_error(error, self.encoder))
+
+    def _as_string(self, element):
+        return element_to_string(element, encoding=self.encoding,
+                                 xml_declaration=False, pretty_print=self.prettify)
+
+    def clear(self):
+        """ Clears collected errors. """
+        self.root = Element('errors', attrib=self._validation_signature)
+        self.tree = ElementTree(self.root)
+
+    def end(self, validator):
+        global used_buffers
+        if self._buffer:
+            used_buffers[id(self._buffer)] -= 1
+            if not used_buffers[id(self._buffer)]:
+                self.__write_to_buffer('</errors>')
+        self._cached_validation_signature = None
+
+    def emit(self, error):
+        if self._buffer_type is None:
+            return
+        result = element_from_error(error, self.encoder)
+        result.attrib.update(self._cached_validation_signature)
+        result = self._as_string(result)
+
+        self.__write_to_buffer(result.strip())
+
+    def _next_from_file(self):
         depth = 0
         while True:
             event, element = next(self.__iterparser)
@@ -326,41 +409,29 @@ class XMLErrorHandler(BaseErrorHandler):
                 if depth == 0:
                     return self.parse(element, **self._parse_args)
 
-    def __str__(self):
-        return self._as_string().decode(self.encoding)
+    def _next_from_socket(self):
+        element_string = b''
+        buffer = self.__socketbuffer
 
-    def add(self, error):
-        self.root.append(element_from_error(error))
+        if buffer == b'</errors>':
+            raise StopIteration
 
-    def _as_string(self, element=None):
-        if element is None:
-            element = self.root
-        return element_to_string(element, encoding=self.encoding,
-                                 xml_declaration=False, pretty_print=self.prettify)
+        while True:
+            if b'</error>' not in buffer:
+                buffer += self._buffer.recv(1024)
+                continue
 
-    def clear(self):
-        """ Clears collected errors. """
-        self.root = Element('errors', attrib=self._validation_signature)
-        self.tree = ElementTree(self.root)
+            element_part, buffer = buffer.split(b'</error>', 1)
+            element_string += (element_part + b'</error>')
+            while buffer.startswith(b'</error>'):
+                element_string += b'</error>'
+                buffer = buffer[len(b'</error>'):]
 
-    def end(self, validator):
-        global used_buffers
-        if self.buffer:
-            used_buffers[id(self.buffer)] -= 1
-            if not used_buffers[id(self.buffer)]:
-                self.buffer.write('</errors>'.encode(self.encoding))
-        self._cached_validation_signature = None
+            if element_string.count(b'<error') > element_string.count(b'</error>'):
+                continue
 
-    def emit(self, error):
-        if self.buffer is None:
-            return
-        result = element_from_error(error, self.encoder)
-        result.attrib.update(self._cached_validation_signature)
-        result = self._as_string(result)
-
-        self.buffer.write(result.strip())
-        if hasattr(self.buffer, 'flush') and callable(self.buffer.flush):
-            self.buffer.flush()
+            self.__socketbuffer = buffer
+            return self.parse(element_string, **self._parse_args)
 
     def parse(self, _input, document_id=None, schema_id=None, validate_signature=True):
         """ Parses XML, represented in different forms, to cerberus error
@@ -407,34 +478,45 @@ class XMLErrorHandler(BaseErrorHandler):
         """ Reads from a buffer and returns their parsed cerberus error
             representations.
 
-            :param buffer: A file-like object.
+            :param buffer: The buffer to read from, :attr:`XMLErrorHandler.buffer`
+                           is used if :obj:`None` is provived.
+            :type buffer: :class:`io.IOBase` (like file objects) or
+                          :class:`socket.socket`
             :param overriding_args: See :meth:`~cerberus_collections.XMLErrorHandler.parse`'s
                                     keyword arguments.
             :returns: A list of :class:`~cerberus.errors.ValidationError`
                       instances.
             """
-        buffer = buffer or self.buffer
-        if buffer is None:
-            raise RuntimeError('No buffer to read from provided.')
-        parse_args = self._parse_args
+        buffer = buffer or self._buffer
+        parse_args = self._parse_args.copy()
         parse_args.update(overriding_args)
 
-        errors = ElementTree().parse(buffer)
-        return self.parse(errors, **parse_args)
+        if isinstance(buffer, IOBase):
+            return self.parse(ElementTree().parse(buffer), **parse_args)
+        elif isinstance(buffer, socket):
+            recv_buffer = b''
+            while True:
+                chunk = buffer.recv(4096)
+                if not chunk:
+                    break
+                recv_buffer += chunk
+            return self.parse(element_from_string(recv_buffer), **parse_args)
+        else:
+            raise RuntimeError("Can't read from object %s" % repr(buffer))
 
     def start(self, validator):
-        global used_buffers
-        if self.buffer:
-            if id(self.buffer) not in used_buffers:
-                self.buffer.write('<errors>'.encode(self.encoding))
-            used_buffers[id(self.buffer)] += 1
         self._cached_validation_signature = self._validation_signature
+        global used_buffers
+        if self._buffer:
+            if id(self._buffer) not in used_buffers:
+                container_element = Element('errors', self._validation_signature)
+                container_element = element_to_string(container_element, method='html')
+                self.__write_to_buffer(container_element[:-len('</errors>')])
+            used_buffers[id(self._buffer)] += 1
 
     def _validate_signature(self, element, document_id=None, schema_id=None):
-        if document_id is None:
-            document_id = self.document_id
-        if schema_id is None:
-            schema_id = self.schema_id
+        document_id = document_id or self.document_id
+        schema_id = schema_id or self.schema_id
 
         schema = {'validator': {'allowed': ['cerberus']},
                   'version': {'allowed': [CERBERUS_VERSION]},
@@ -471,3 +553,14 @@ class XMLErrorHandler(BaseErrorHandler):
         if self.schema_id is not None:
             result['schema_id'] = self.schema_id
         return result
+
+    def _write_to_file(self, data):
+        if not isinstance(data, bytes):
+            data = data.encode(self.encoding)
+        self._buffer.write(data)
+        self._buffer.flush()
+
+    def _write_to_socket(self, data):
+        if not isinstance(data, bytes):
+            data = data.encode(self.encoding)
+        self._buffer.sendall(data)
