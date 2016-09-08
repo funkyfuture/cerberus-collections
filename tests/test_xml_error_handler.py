@@ -6,7 +6,7 @@ from lxml.etree import _Element, tostring
 from pytest import raises
 
 from cerberus_collections import Validator, XMLErrorHandler
-from cerberus_collections.error_handlers.xml import ContextMismatch, Encoder, Decoder, DecodingError, element_from_error
+from cerberus_collections.error_handlers.xml import ValidationContextMismatch, Encoder, Decoder, DecodingError, element_from_error
 
 from . import assert_equal_errors, sample_document, sample_schema
 
@@ -76,8 +76,8 @@ def test_read_errors():
     parsed_errors = read_errors(buffer, 'foo', 'bar')
     assert_equal_errors(validator._errors, parsed_errors)
 
-    with raises(ContextMismatch):
         read_errors(buffer, 'bar', 'foo')
+    with raises(ValidationContextMismatch):
 
 
 def test_iter_errors():

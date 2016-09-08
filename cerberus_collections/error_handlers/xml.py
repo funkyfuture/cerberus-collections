@@ -10,7 +10,7 @@ from lxml.etree import fromstring as element_from_string
 from cerberus import Validator
 from cerberus.errors import BaseErrorHandler, ValidationError
 
-from cerberus_collections.error_handlers.exceptions import ContextMismatch, DecodingError
+from cerberus_collections.error_handlers.exceptions import ValidationContextMismatch, DecodingError
 from cerberus_collections.utils import binary_to_hexstring, hexstring_to_bytes
 from cerberus_collections.versions import CERBERUS_VERSION, __version__
 
@@ -455,11 +455,11 @@ class XMLErrorHandler(BaseErrorHandler):
             warn('The error/s was/were serialized with a different handler version: {} != {}'
                  .format(__version__, element.attrib['handler_version']))
         if det['document_id']:
-            raise ContextMismatch("document_ids don't match: {} != {}"
-                                  .format(document_id, element.attrib['document_id']))
+            raise ValidationContextMismatch("document_ids don't match: {} != {}"
+                                            .format(document_id, element.attrib['document_id']))
         if det['schema_id']:
-            raise ContextMismatch("schema_ids don't match: {} != {}"
-                                  .format(schema_id, element.attrib['schema_id']))
+            raise ValidationContextMismatch("schema_ids don't match: {} != {}"
+                                            .format(schema_id, element.attrib['schema_id']))
 
     @property
     def _validation_signature(self):
