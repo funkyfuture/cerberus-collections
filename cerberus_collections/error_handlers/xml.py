@@ -287,10 +287,13 @@ class XMLErrorHandler(BaseErrorHandler):
         :param encoder: An instance of something alike :class:`Encoder`.
         :param decoder: An instance of something alike :class:`Decoder`.
     """
+    encoder = default_encoder
+    decoder = default_decoder
+
     # TODO add compress option
     def __init__(self, buffer=None, prettify=False, encoding='utf-8',
                  consider_context=False, document_id=None, schema_id=None,
-                 encoder=default_encoder, decoder=default_decoder):
+                 encoder=None, decoder=None):
         self.buffer = buffer
         self.prettify = prettify
         self.encoding = encoding
@@ -298,8 +301,10 @@ class XMLErrorHandler(BaseErrorHandler):
         self.document_id = document_id
         self.schema_id = schema_id
         self._cached_validation_signature = None
-        self.encoder = encoder
-        self.decoder = decoder
+        if encoder:
+            self.encoder = encoder
+        if decoder:
+            self.decoder = decoder
 
         self.clear()
 
