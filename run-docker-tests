@@ -6,9 +6,9 @@ sed -i -e 's,^ENV TOX_USER_ID=.*\$,ENV TOX_USER_ID='"${UID}"',g' Dockerfile
 
 docker build -t cerberus-collections-tests . && \
 if [ -d ".tox" ]; then
-    docker run --rm -v "$(pwd)/.tox:/src/.tox" cerberus-collections-tests "${@}"
+    docker run --rm --entrypoint tox -v "$(pwd)/.tox:/src/.tox" cerberus-collections-tests "${@}"
 else
-    docker run --rm cerberus-collections-tests "${@}"
+    docker run --rm --entrypoint tox cerberus-collections-tests "${@}"
 fi
 
 cd -

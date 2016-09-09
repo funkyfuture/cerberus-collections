@@ -269,9 +269,11 @@ class XMLErrorHandler(BaseErrorHandler):
         If called with a sequence of :class:`~cerberus.errors.ValidationError`
         instances as argument, the returned tree represents these.
 
-        During cerberus' validation it dumps xml via an ``buffer`` if provided.
+        During cerberus' validation it dumps xml via a ``buffer`` object if
+        provided.
 
-        An instance is iterable and returns errors it reads from ``buffer``.
+        An instance is iterable and returns errors it reads from the ``buffer``
+        object.
 
         All configuration options are accessible as instance properties.
 
@@ -282,11 +284,12 @@ class XMLErrorHandler(BaseErrorHandler):
         :type prettify: bool
         :param encoding: Character encoding.
         :type encoding: str
-        :param consider_context: Check ``document_id`` and ``schema_id`` while parsing.
+        :param consider_context: Write ``document_id`` and ``schema_id`` and check
+                                 these while parsing.
         :type consider_context: bool
-        :param document_id: An id that refers the document being validated.
+        :param document_id: An identifier that refers the document being validated.
         :type document_id: str
-        :param schema_id: An id that refers the used validation schema.
+        :param schema_id: An identifier that refers the used validation schema.
         :type schema_id: str
         :param encoder: An instance of something alike
                         :class:`~cerberus_collections.error_handlers.xml.Encoder`.
@@ -457,7 +460,8 @@ class XMLErrorHandler(BaseErrorHandler):
             :param schema_id: Errors' ``schema_id`` attributes must match this
                               one.
             :type schema_id: str
-            :param validate_signature: Controls whether to check signature.
+            :param validate_signature: Controls whether to check validation
+                   signature.
             :type validate_signature: bool
             :returns: The parsed error or errors.
             :rtype: A :class:`~cerberus.errors.ValidationError` instance if an
@@ -485,7 +489,7 @@ class XMLErrorHandler(BaseErrorHandler):
                 'schema_id': self.schema_id,
                 'validate_signature': self.consider_context}
 
-    def read(self, buffer=None, **overriding_args):
+    def read(self, buffer=None, **parse_args):
         """ Reads from a buffer and returns their parsed cerberus error
             representations.
 
@@ -493,17 +497,17 @@ class XMLErrorHandler(BaseErrorHandler):
                            is used if :obj:`None` is provived.
             :type buffer: :class:`io.IOBase` (like file objects) or
                           :class:`socket.socket`
-            :param overriding_args: See :meth:`~cerberus_collections.XMLErrorHandler.parse`'s
+            :param parse_args: See :meth:`~cerberus_collections.XMLErrorHandler.parse`'s
                                     keyword arguments.
             :returns: A list of :class:`~cerberus.errors.ValidationError`
                       instances.
             """
         buffer = buffer or self._buffer
-        parse_args = self._parse_args.copy()
-        parse_args.update(overriding_args)
+        _parse_args = self._parse_args.copy()
+        _parse_args.update(parse_args)
 
         if isinstance(buffer, IOBase):
-            return self.parse(ElementTree().parse(buffer), **parse_args)
+            return self.parse(ElementTree().parse(buffer), **_parse_args)
         elif isinstance(buffer, socket):
             recv_buffer = b''
             while True:
@@ -511,7 +515,7 @@ class XMLErrorHandler(BaseErrorHandler):
                 if not chunk:
                     break
                 recv_buffer += chunk
-            return self.parse(element_from_string(recv_buffer), **parse_args)
+            return self.parse(element_from_string(recv_buffer), **_parse_args)
         else:
             raise RuntimeError("Can't read from object %s" % repr(buffer))
 

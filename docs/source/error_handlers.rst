@@ -39,7 +39,6 @@ The default encoder and decoder support all of Python's builtin types except
 
    `lxml <http://lxml.de>`_ (`PyPI <https://pypi.python.org/pypi/lxml/>`_)
 
-
 API
 ...
 
