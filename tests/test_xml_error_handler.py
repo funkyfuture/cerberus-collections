@@ -12,16 +12,18 @@ from cerberus_collections.error_handlers.xml import ValidationContextMismatch, E
 from . import assert_equal_errors, sample_document, sample_schema
 
 
-def test_encoder():
+def test_encoder_decoder():
     x = Encoder.encode('a_string', 'foo')
     assert isinstance(x, _Element)
     assert x.attrib['type'] == 'str'
     assert x.text == 'foo'
 
-    x = Encoder.encode('some_bytes', bytes([1, 2, 3]))
+    some_bytes = bytes([1, 2, 3])
+    x = Encoder.encode('some_bytes', some_bytes)
     assert isinstance(x, _Element)
     assert x.attrib['type'] == 'bytes'
-    assert x.text == '010203'
+    assert x.text == 'AQID'
+    assert Decoder.decode(x) == some_bytes
 
 
 def test_decoding_error():

@@ -13,7 +13,7 @@ from cerberus import Validator
 from cerberus.errors import BaseErrorHandler, ValidationError
 
 from cerberus_collections.error_handlers.exceptions import ValidationContextMismatch, DecodingError
-from cerberus_collections.utils import binary_to_hexstring, hexstring_to_bytes
+from cerberus_collections.utils import binary_to_base64, base64_to_bytes
 from cerberus_collections.versions import CERBERUS_VERSION, __version__
 
 
@@ -57,9 +57,11 @@ class Encoder:
 
     @staticmethod
     def _encode_bytes(value):
-        return binary_to_hexstring(value)
+        return binary_to_base64(value)
 
-    _encode_bytearray = _encode_bytes
+    @staticmethod
+    def _encode_bytearray(value):
+        return binary_to_base64(bytes(value))
 
     @classmethod
     def _ncd_mapping(cls, mapping):
@@ -124,11 +126,11 @@ class Decoder:
 
     @staticmethod
     def _decode_bytes(element):
-        return hexstring_to_bytes(element.text)
+        return base64_to_bytes(element.text)
 
     @staticmethod
     def _decode_bytearray(element):
-        return bytearray(hexstring_to_bytes(element.text))
+        return bytearray(base64_to_bytes(element.text))
 
     @staticmethod
     def _decode_complex(element):

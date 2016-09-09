@@ -1,16 +1,11 @@
-import sys
+from base64 import b64encode, b64decode
 
-if sys.version_info < (3, 5):
-    import binascii
 
-    def binary_to_hexstring(value):
-        return binascii.hexlify(value).decode('utf-8')
+def binary_to_base64(value):
+    if not isinstance(value, bytes):
+        value = bytes(value)
+    return b64encode(value).decode()
 
-    def hexstring_to_bytes(value):
-        return binascii.unhexlify(value)
-else:
-    def binary_to_hexstring(value):
-        return value.hex()
 
-    def hexstring_to_bytes(value):
-        return bytes.fromhex(value)
+def base64_to_bytes(value):
+    return b64decode(value)
