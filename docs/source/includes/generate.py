@@ -27,12 +27,23 @@ validator(document)
 
 
 def generate():
+    # JSON Error Handler
+
+    error_handler = cerberus_collections.JSONErrorHandler(compact=True, indent=2)
+    error_handler.extend(validator._errors)
+    example = textwrap.indent(str(error_handler), '  ')
+    output_file = path.join(collections_path, 'docs', 'source', 'includes', 'json_error_handler.rst')
+    with open(output_file, 'wt') as f:
+        print('.. generated with version {} ({})\n'.format(cerberus_collections.__version__, datetime.now()), file=f)
+        print('.. code-block:: json\n\n' + example, file=f)
+
+
     # XML Error Handler
 
     error_handler = \
         cerberus_collections.XMLErrorHandler(prettify=True, document_id='TARDIS',
                                              schema_id='HistMat', consider_context=True)
-    error_handler(validator._errors)
+    error_handler.extend(validator._errors)
     example = textwrap.indent(str(error_handler), '  ')
     output_file = path.join(collections_path, 'docs', 'source', 'includes', 'xml_error_handler.rst')
     with open(output_file, 'wt') as f:

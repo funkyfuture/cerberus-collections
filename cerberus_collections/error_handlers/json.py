@@ -2,7 +2,6 @@ from io import IOBase
 import json
 from socket import socket
 
-
 from cerberus import Validator
 from cerberus.errors import BaseErrorHandler, ErrorList
 
@@ -11,6 +10,12 @@ from cerberus_collections.utils import error_as_dict, error_from_dict
 
 
 def extract_mapping_from_json_chunk(s):
+    """ Tries to extract a mapping from an arbitrary sized json chunk.
+
+        :returns: A two-value tuple with the extracted mapping string or
+                  :obj:`None` and remaining part of the chunk.
+        :rtype: str
+    """
     # cython candidate
     escaped = quoted = False
     ob = cb = 0
@@ -21,10 +26,7 @@ def extract_mapping_from_json_chunk(s):
         elif c == '\\':
             escaped = True
         elif c == '"':
-            if quoted:
-                quoted = False
-            else:
-                quoted = True
+            quoted = not quoted
         elif c == '{' and not quoted:
             ob += 1
         elif c == '}' and not quoted:
@@ -34,25 +36,52 @@ def extract_mapping_from_json_chunk(s):
     else:
         return None, s
 
-    mapping = s[:i+1]
-    rest = s[i+1:]
-
-    assert rest.startswith((',', ']'))
-
-    rest = rest[1:].lstrip()
-
-    assert mapping.startswith('{')
-    assert mapping.endswith('}')
-    if rest:
-        assert rest.startswith(('{', ']'))
-
-    return mapping, rest
+    return s[:i+1], s[i+2:].lstrip()
 
 
 class JSONErrorHandler(BaseErrorHandler, BufferAdapter, ValidationContext):
-    def __init__(self, buffer=None,
-                 compact=True, indent=False, encoding='utf-8',
-                 consider_context=False, document_id=None, schema_id=None):
+    """ An error handler that (de-)serializes cerberus validation errors to and
+        from JSON.
+
+        Calling an instance without arguments returns the
+        errors that were collected during the last validation of a
+        :class:`~cerberus.Validator`, if the handler
+        was bound to its :attr:`~cerberus.Validator.error_handler` property, as
+        JSON string. That's what happens when you get the
+        :attr:`~cerberus.Validator.errors` of a validator with this handler
+        bound as its :attr:`~cerberus.Validator.error_handler`.
+
+        If called with a sequence of :class:`~cerberus.errors.ValidationError`
+        instances as argument, the returned JSON string represents these.
+
+        During cerberus' validation it dumps json via a ``buffer`` object if
+        provided.
+
+        An instance is iterable and returns errors it reads from the ``buffer``
+        object.
+
+        All configuration options are accessible as instance properties.
+
+        :param buffer: An object for I/O when emitting and iterating.
+        :type buffer: :class:`io.IOBase` (like file objects),
+                      :class:`socket.socket` or :obj:`None`
+        :param compact: Omit unecessary whitespaces.
+        :type compact: bool
+        :param indent: Block indentation.
+        :type indent: integer or :obj:`None`
+        :param encoding: Character encoding.
+        :type encoding: str
+        :param consider_context: Write ``document_id`` and ``schema_id`` and check
+                                 these while parsing.
+        :type consider_context: bool
+        :param document_id: An identifier that refers the document being validated.
+        :type document_id: str
+        :param schema_id: An identifier that refers the used validation schema.
+        :type schema_id: str
+        """
+    def __init__(self, buffer=None, compact=True, indent=-1,
+                 encoding='utf-8', consider_context=False,
+                 document_id=None, schema_id=None):
         self.buffer = buffer
         self.compact = compact
         self.indent = indent
@@ -105,6 +134,7 @@ class JSONErrorHandler(BaseErrorHandler, BufferAdapter, ValidationContext):
         self.errors.append(error)
 
     def clear(self):
+        """ Clears collected errors. """
         self.errors = ErrorList()
 
     def end(self, validator):
@@ -169,6 +199,24 @@ class JSONErrorHandler(BaseErrorHandler, BufferAdapter, ValidationContext):
         return error_from_dict(json.loads(error_string))
 
     def parse(self, _json, **parse_args):
+        """ Parses JSON to cerberus error representations.
+
+        :param _json: json-encoded error representation error or a list of these.
+        :type _json: str
+        :param document_id: Errors' ``document_id`` attributes must match
+                            this one.
+        :type document_id: str
+        :param schema_id: Errors' ``schema_id`` attributes must match this
+                          one.
+        :type schema_id: str
+        :param validate_signature: Controls whether to check validation
+               signature.
+        :type validate_signature: bool
+        :returns: The parsed error or errors.
+        :rtype: A :class:`~cerberus.errors.ValidationError` instance if an
+                encoded mapping was provided, or a list of these in case
+                of a list.
+        """
         validate_signature = parse_args.pop('validate_signature',
                                             self.consider_context)
 
@@ -184,7 +232,6 @@ class JSONErrorHandler(BaseErrorHandler, BufferAdapter, ValidationContext):
             return error_from_dict(error)
         elif _json.startswith('['):
             errors = json.loads(_json)
-            print(parse_args)
             if validate_signature:
                 for error in errors:
                     identifiers = self._pop_validation_signature(error)
@@ -203,6 +250,18 @@ class JSONErrorHandler(BaseErrorHandler, BufferAdapter, ValidationContext):
         return {k: v for k, v in identifiers.items() if v is not None}
 
     def read(self, buffer=None, **parse_args):
+        """ Reads from a buffer and returns the parsed cerberus error
+            representations.
+
+            :param buffer: The buffer to read from, :attr:`~JSONErrorHandler.buffer`
+                           is used if :obj:`None` is provided.
+            :type buffer: :class:`io.IOBase` (like file objects) or
+                          :class:`socket.socket`
+            :param parse_args: See :meth:`~cerberus_collections.JSONErrorHandler.parse`'s
+                                    keyword arguments.
+            :returns: A list of :class:`~cerberus.errors.ValidationError`
+                      instances.
+        """
         buffer = buffer or self.buffer
         _parse_args = self._parse_args.copy()
         _parse_args.update(parse_args)

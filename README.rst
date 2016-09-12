@@ -14,7 +14,8 @@ Python 2 is not supposed to be supported, though some parts may run reliably.
 
 ### Error Handlers
 
-- `cerberus_collections.XMLErrorHandler` (requires [lxml](https://pypi.org/project/lxml/))
+- `cerberus_collections.JSONErrorHandler`
+- `cerberus_collections.XMLErrorHandler` (requires [lxml](https://pypi.python.org/pypi/lxml))
 
 ([documentation](https://cerberus-collections.rtfd.io/en/latest/error_handlers.html))
 
@@ -22,7 +23,6 @@ Python 2 is not supposed to be supported, though some parts may run reliably.
 
 - HumanReadable
 - YAML
-- json
 - logger
 - handler chainer
 
