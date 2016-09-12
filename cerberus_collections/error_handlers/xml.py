@@ -199,7 +199,7 @@ def element_from_error(error, encoder):
     element = Element('error', attrib={
         'id': hex(hash(error))[3:],
         'code': str(error.code),
-        'rule': error.rule
+        'rule': error.rule or 'None'
     })
 
     for error_attribute in ('document_path', 'schema_path', 'constraint', 'value'):
@@ -235,13 +235,16 @@ def error_from_element(element, decoder):
         :returns: A validation error object.
         :rtype: :class:`~cerberus.errors.ValidationError`
     """
+    rule = None if element.attrib['rule'] == 'None' else element.attrib['rule']
+    constraint = element.find('constraint')
+    if constraint is not None:
+        constraint = decoder(constraint)
+
     error = ValidationError(decoder(element.find('document_path')),
                             decoder(element.find('schema_path')),
-                            int(element.attrib['code']),
-                            element.attrib['rule'],
-                            decoder(element.find('constraint')),
+                            int(element.attrib['code']), rule, constraint,
                             decoder(element.find('value')),
-                            ())
+                            info=())
 
     if error.is_group_error:
         error.info = ([error_from_element(x, decoder) for x in element.iterfind('error')],)

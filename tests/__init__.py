@@ -9,7 +9,14 @@ sample_schema = {'a_dict': {'keyschema': {'type': 'integer'},
                                'excludes': ['a_dict', 'a_list']}}
 sample_document = {'a_dict': {0: 'abc', 'one': 'abc', 2: 'aBc', 'three': 'abC'},
                    'a_list': [0, 'abc', 'abC'],
-                   'fibonacci': 42}
+                   'fibonacci': 42,
+                   'mess_around': '</error>\}'}
+
+
+def assert_equal_dicts(d1, d2):
+    assert isinstance(d1, dict)
+    assert isinstance(d2, dict)
+    assert sorted(d1.items(), key=hash) == sorted(d2.items(), key=hash)
 
 
 def assert_equal_errors(e1, e2):
@@ -21,7 +28,10 @@ def assert_equal_errors(e1, e2):
         assert e1 == e2
         assert e1.rule == e2.rule
         assert e1.constraint == e2.constraint
-        assert e1.value == e2.value
+        if isinstance(e1.value, dict):
+            assert_equal_dicts(e1.value, e2.value)
+        else:
+            assert e1.value == e2.value
         assert e1.info == e2.info
         if e1.is_group_error:
             assert_equal_errors(e1.child_errors, e2.child_errors)
