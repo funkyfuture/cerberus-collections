@@ -1,6 +1,6 @@
 __all__ = []
 
-from cerberus_collections.error_handlers.json import JSONErrorHandler
+from cerberus_collections.error_handlers.json import JSONErrorHandler  # noqa: E402
 __all__.append(JSONErrorHandler.__name__)
 
 try:

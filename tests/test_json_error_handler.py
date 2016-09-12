@@ -4,7 +4,6 @@ from io import StringIO
 from socket import socketpair
 import sys
 
-from cerberus.errors import ValidationError
 from pytest import raises
 
 from cerberus_collections import Validator, JSONErrorHandler
@@ -41,7 +40,8 @@ def read_errors_from_file(buffer, document_id, schema_id):
     buffer.seek(0)
     print(buffer.read())
     buffer.seek(0)
-    error_reader = JSONErrorHandler(document_id=document_id, schema_id=schema_id, consider_context=True)
+    error_reader = JSONErrorHandler(
+        document_id=document_id, schema_id=schema_id, consider_context=True)
     return error_reader.read(buffer)
 
 

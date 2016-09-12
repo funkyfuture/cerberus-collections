@@ -107,7 +107,8 @@ class ValidationContext:
     def _validation_signature(self):
         if not self.consider_context:
             return {}
-        result = {'validator': 'cerberus', 'version': CERBERUS_VERSION, 'handler_version': __version__}
+        result = {'validator': 'cerberus', 'version': CERBERUS_VERSION,
+                  'handler_version': __version__}
         if self.document_id is not None:
             result['document_id'] = self.document_id
         if self.schema_id is not None:

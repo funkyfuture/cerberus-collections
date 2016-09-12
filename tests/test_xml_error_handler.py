@@ -8,7 +8,8 @@ from pytest import raises
 
 from cerberus_collections import Validator, XMLErrorHandler
 from cerberus_collections.error_handlers.exceptions import ValidationContextMismatch
-from cerberus_collections.error_handlers.xml import Encoder, Decoder, DecodingError, element_from_error
+from cerberus_collections.error_handlers.xml import \
+    Encoder, Decoder, DecodingError, element_from_error
 
 from . import assert_equal_errors, sample_document, sample_schema
 
@@ -51,12 +52,14 @@ def write_errors_to_file(document_id, schema_id):
 
 def read_errors_from_file(buffer, document_id, schema_id):
     buffer.seek(0)
-    error_reader = XMLErrorHandler(document_id=document_id, schema_id=schema_id, consider_context=True)
+    error_reader = XMLErrorHandler(
+        document_id=document_id, schema_id=schema_id, consider_context=True)
     return error_reader.read(buffer)
 
 
 def test_element():
-    ve1 = ValidationError(('a_field',), ('a_field', 'type'), int('24', base=16), 'type', 'string', 0, ())
+    ve1 = ValidationError(('a_field',), ('a_field', 'type'),
+                          int('24', base=16), 'type', 'string', 0, ())
     ee = element_from_error(ve1, Encoder())
     assert ee.tag == 'error'
     assert ee.attrib['code'] == str(int('24', base=16))
