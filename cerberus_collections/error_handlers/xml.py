@@ -256,7 +256,7 @@ def error_from_element(element, decoder):
 
 
 class XMLErrorHandler(BaseErrorHandler, BufferAdapter, ValidationContext):
-    """ An errorhandler that (de-)serializes cerberus validation errors to and
+    """ An error handler that (de-)serializes cerberus validation errors to and
         from XML.
 
         Calling an instance without arguments returns the
@@ -460,18 +460,18 @@ class XMLErrorHandler(BaseErrorHandler, BufferAdapter, ValidationContext):
             return error_from_element(_input, self.decoder)
 
     def read(self, buffer=None, **parse_args):
-        """ Reads from a buffer and returns their parsed cerberus error
+        """ Reads from a buffer and returns the parsed cerberus error
             representations.
 
-            :param buffer: The buffer to read from, :attr:`XMLErrorHandler.buffer`
-                           is used if :obj:`None` is provived.
+            :param buffer: The buffer to read from, :attr:`buffer` is used if
+                           :obj:`None` is provided.
             :type buffer: :class:`io.IOBase` (like file objects) or
                           :class:`socket.socket`
             :param parse_args: See :meth:`~cerberus_collections.XMLErrorHandler.parse`'s
                                     keyword arguments.
             :returns: A list of :class:`~cerberus.errors.ValidationError`
                       instances.
-            """
+        """
         buffer = buffer or self._buffer
         _parse_args = self._parse_args.copy()
         _parse_args.update(parse_args)
