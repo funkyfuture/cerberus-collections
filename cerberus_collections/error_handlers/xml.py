@@ -1,4 +1,4 @@
-from collections import Sequence, defaultdict
+from collections import Sequence
 from datetime import datetime
 from io import IOBase
 from socket import socket
@@ -8,13 +8,12 @@ from lxml.etree import Element, ElementTree, _ElementTree, iterparse
 from lxml.etree import tostring as element_to_string
 from lxml.etree import fromstring as element_from_string
 
-
 from cerberus import Validator
 from cerberus.errors import BaseErrorHandler, ValidationError
 
-from cerberus_collections.error_handlers.exceptions import ValidationContextMismatch, DecodingError
+from cerberus_collections.error_handlers.exceptions import DecodingError
+from cerberus_collections.error_handlers.mixins import BufferAdapter, ValidationContext
 from cerberus_collections.utils import binary_to_base64, base64_to_bytes
-from cerberus_collections.versions import CERBERUS_VERSION, __version__
 
 
 class Encoder:
@@ -256,10 +255,7 @@ def error_from_element(element, decoder):
     return error
 
 
-used_buffers = defaultdict(int)
-
-
-class XMLErrorHandler(BaseErrorHandler):
+class XMLErrorHandler(BaseErrorHandler, BufferAdapter, ValidationContext):
     """ An errorhandler that (de-)serializes cerberus validation errors to and
         from XML.
 
@@ -355,36 +351,10 @@ class XMLErrorHandler(BaseErrorHandler):
         return self
 
     def __next__(self):
-        return self.__next_from_buffer()
+        return self._next_from_buffer()
 
     def __str__(self):
         return self._as_string(self.root).decode(self.encoding)
-
-    @property
-    def buffer(self):
-        return self._buffer
-
-    @buffer.setter
-    def buffer(self, buffer):
-        if isinstance(buffer, IOBase):
-            self._buffer_type = IOBase
-            self.__next_from_buffer = self._next_from_file
-            self.__write_to_buffer = self._write_to_file
-        elif isinstance(buffer, socket):
-            self._buffer_type = socket
-            self.__next_from_buffer = self._next_from_socket
-            self.__write_to_buffer = self._write_to_socket
-        else:
-            self._buffer_type = None
-            self.__next_from_buffer = self.__nop
-            self.__write_to_buffer = self.__nop
-            if buffer is not None:
-                warn('Unknown buffer type, errors will not be emitted withot '
-                     'notice and the error handler is not iterable.')
-        self._buffer = buffer
-
-    def __nop(self, *args, **kwargs):
-        pass
 
     def add(self, error):
         self.root.append(element_from_error(error, self.encoder))
@@ -399,11 +369,12 @@ class XMLErrorHandler(BaseErrorHandler):
         self.tree = ElementTree(self.root)
 
     def end(self, validator):
-        global used_buffers
-        if self._buffer:
-            used_buffers[id(self._buffer)] -= 1
-            if not used_buffers[id(self._buffer)]:
-                self.__write_to_buffer('</errors>')
+        if self._buffer_type is None:
+            return
+
+        self.used_emit_buffers[id(self._buffer)] -= 1
+        if not self.used_emit_buffers[id(self._buffer)]:
+            self._write_to_buffer('</errors>')
         self._cached_validation_signature = None
 
     def emit(self, error):
@@ -413,7 +384,7 @@ class XMLErrorHandler(BaseErrorHandler):
         result.attrib.update(self._cached_validation_signature)
         result = self._as_string(result)
 
-        self.__write_to_buffer(result.strip())
+        self._write_to_buffer(result.strip())
 
     def _next_from_file(self):
         depth = 0
@@ -488,12 +459,6 @@ class XMLErrorHandler(BaseErrorHandler):
         elif _input.tag == 'error':
             return error_from_element(_input, self.decoder)
 
-    @property
-    def _parse_args(self):
-        return {'document_id': self.document_id,
-                'schema_id': self.schema_id,
-                'validate_signature': self.consider_context}
-
     def read(self, buffer=None, **parse_args):
         """ Reads from a buffer and returns their parsed cerberus error
             representations.
@@ -525,62 +490,15 @@ class XMLErrorHandler(BaseErrorHandler):
             raise RuntimeError("Can't read from object %s" % repr(buffer))
 
     def start(self, validator):
+        if self._buffer_type is None:
+            return
+
         self._cached_validation_signature = self._validation_signature
-        global used_buffers
-        if self._buffer:
-            if id(self._buffer) not in used_buffers:
-                container_element = Element('errors', self._validation_signature)
-                container_element = element_to_string(container_element, method='html')
-                self.__write_to_buffer(container_element[:-len('</errors>')])
-            used_buffers[id(self._buffer)] += 1
+        if id(self._buffer) not in self.used_emit_buffers:
+            container_element = Element('errors', self._validation_signature)
+            container_element = element_to_string(container_element, method='html')
+            self._write_to_buffer(container_element[:-len('</errors>')])
+        self.used_emit_buffers[id(self._buffer)] += 1
 
-    def _validate_signature(self, element, document_id=None, schema_id=None):
-        document_id = document_id or self.document_id
-        schema_id = schema_id or self.schema_id
-
-        schema = {'validator': {'allowed': ['cerberus']},
-                  'version': {'allowed': [CERBERUS_VERSION]},
-                  'handler_version': {'allowed': [__version__]}}
-        if document_id is not None:
-            schema.update({'document_id': {'allowed': [document_id]}})
-        if schema_id is not None:
-            schema.update({'schema_id': {'allowed': [schema_id]}})
-
-        validator = Validator(schema, allow_unknown=True, ignore_none_values=True)
-        validator(dict(element.attrib))
-
-        det = validator.document_error_tree
-        if det['validator'] or det['version']:
-            warn('The parsed error/s was/were generated with a different validator: {} {} != {} {}'
-                 .format('cerberus', CERBERUS_VERSION, element.attrib['validator'], element.attrib['version']))
-        if det['handler_version']:
-            warn('The error/s was/were serialized with a different handler version: {} != {}'
-                 .format(__version__, element.attrib['handler_version']))
-        if det['document_id']:
-            raise ValidationContextMismatch("document_ids don't match: {} != {}"
-                                            .format(document_id, element.attrib['document_id']))
-        if det['schema_id']:
-            raise ValidationContextMismatch("schema_ids don't match: {} != {}"
-                                            .format(schema_id, element.attrib['schema_id']))
-
-    @property
-    def _validation_signature(self):
-        if not self.consider_context:
-            return {}
-        result = {'validator': 'cerberus', 'version': CERBERUS_VERSION, 'handler_version': __version__}
-        if self.document_id is not None:
-            result['document_id'] = self.document_id
-        if self.schema_id is not None:
-            result['schema_id'] = self.schema_id
-        return result
-
-    def _write_to_file(self, data):
-        if not isinstance(data, bytes):
-            data = data.encode(self.encoding)
-        self._buffer.write(data)
-        self._buffer.flush()
-
-    def _write_to_socket(self, data):
-        if not isinstance(data, bytes):
-            data = data.encode(self.encoding)
-        self._buffer.sendall(data)
+    def _validate_signature(self, element, *args, **kwargs):
+        super()._validate_signature(dict(element.attrib), *args, **kwargs)

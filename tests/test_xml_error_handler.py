@@ -7,7 +7,8 @@ from lxml.etree import _Element, tostring
 from pytest import raises
 
 from cerberus_collections import Validator, XMLErrorHandler
-from cerberus_collections.error_handlers.xml import ValidationContextMismatch, Encoder, Decoder, DecodingError, element_from_error
+from cerberus_collections.error_handlers.exceptions import ValidationContextMismatch
+from cerberus_collections.error_handlers.xml import Encoder, Decoder, DecodingError, element_from_error
 
 from . import assert_equal_errors, sample_document, sample_schema
 
