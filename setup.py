@@ -16,7 +16,7 @@ for x in requirements:
 
 setup(
     name='cerberus-collections',
-    version=CERBERUS_VERSION.split('.', 1)[0] + '.2016.09-a',
+    version=CERBERUS_VERSION.split('.', 1)[0] + '.2016.09-a1',
     packages=['cerberus_collections'],
     url='https://github.com/funkyfuture/cerberus-collections',
     license='ISC',
