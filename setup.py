@@ -24,7 +24,7 @@ setup(
     author='Frank Sachsenheim',
     author_email='funkyfuture@riseup.net',
     description='Extensions for cerberus, a lightweight and extensible data validation library for Python',
-    long_description=open('README.md').read(),
+    long_description=open('README.rst').read(),
     install_requires=requirements,
     keywords=['validation', 'schema', 'xml'],
     classifiers=[

@@ -1,63 +1,90 @@
-# cerberus-collections
+cerberus-collections
+====================
 
-[Cerberus](http://python-cerberus.org) is a lightweight and extensible data
-validation library for Python.
+|latest| |python-support|
+
+`Cerberus`_ is a lightweight and extensible data validation library for Python.
 
 Here are the extensions.
 
-## Contents
+Contents
+++++++++
 
 This package aims to provide various code pieces that add functionality for
 validations.
 
 Python 2 is not supposed to be supported, though some parts may run reliably.
 
-### Error Handlers
+Error Handlers
+--------------
 
-- `cerberus_collections.JSONErrorHandler`
-- `cerberus_collections.XMLErrorHandler` (requires [lxml](https://pypi.python.org/pypi/lxml))
+- :class:`~cerberus_collections.JSONErrorHandler`
+- :class:`~cerberus_collections.XMLErrorHandler` (requires `lxml`_)
 
-([documentation](https://cerberus-collections.rtfd.io/en/latest/error_handlers.html))
+(`documentation <https://cerberus-collections.rtfd.io/en/latest/error_handlers.html>`_)
 
-##### TODO
+TODO
+....
 
-- HumanReadable
+- HumanErrorhandler
 - YAML
 - logger
 - handler chainer
 
-### Rules
 
-### Types
+Rules
+-----
 
-##### TODO
 
-- python builtin types https://github.com/nicolaiarocci/cerberus/issues/186
+Types
+-----
+
+TODO
+....
+
+- python builtin types (https://github.com/nicolaiarocci/cerberus/issues/186)
 - common networking and posix data
 
-### Validators
+Validators
+----------
 
-##### TODO
+TODO
+....
 
 - PyObjectValidator
 
 
-## Versioning scheme
+Versioning scheme
++++++++++++++++++
 
-The first version segment of a release matches the one of the Cerberus version 
-it supports. The following parts reflect the release's month and possibly pre- 
+The first version segment of a release matches the one of the Cerberus version
+it supports. The following parts reflect the release's month and possibly pre-
 or post-release segments.
 
 
-## Contributing
+Contributing
+++++++++++++
 
 If you have a Docker client installed, you can easily run all tests:
 
     <project_dir>/run-docker-tests
 
 
-## TODO
+TODO
+++++
 
 - type annotations
 - bump-script
 - release-script
+- maybe Cython
+
+
+.. _`Cerberus`: http://python-cerberus.org
+.. _`lxml`: https://pypi.python.org/pypi/lxml
+
+.. |latest| image:: https://img.shields.io/pypi/v/cerberus-collections.svg
+   :target: https://pypi.python.org/pypi/cerberus-collections
+   :alt: Version
+.. |python-support| image:: https://img.shields.io/pypi/pyversions/cerberus-collections.svg
+   :target: https://pypi.python.org/pypi/cerberus-collections
+   :alt: Python versions
