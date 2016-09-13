@@ -18,8 +18,8 @@ Python 2 is not supposed to be supported, though some parts may run reliably.
 Error Handlers
 --------------
 
-- :class:`~cerberus_collections.JSONErrorHandler`
-- :class:`~cerberus_collections.XMLErrorHandler` (requires `lxml`_)
+- ``cerberus_collections.JSONErrorHandler``
+- ``cerberus_collections.XMLErrorHandler`` (requires `lxml`_)
 
 (`documentation <https://cerberus-collections.rtfd.io/en/latest/error_handlers.html>`_)
 
@@ -74,8 +74,6 @@ TODO
 ++++
 
 - type annotations
-- bump-script
-- release-script
 - maybe Cython
 
 
