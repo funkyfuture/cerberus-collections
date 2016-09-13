@@ -65,7 +65,16 @@ or post-release segments.
 Contributing
 ++++++++++++
 
-If you have a Docker client installed, you can easily run all tests:
+If you wrote an extension for Cerberus that suites general use, you're welcome
+to have it included here. If you're interested in one of the mentioned, yet
+unimplemented units, your initiative is highly appreciated. As improvements of
+documentation and tests are as well.
+
+(`Issue tracker <https://github.com/funkyfuture/cerberus-collections/issues>`_)
+
+
+If you have a Docker client installed, you can easily run tests against all
+supported Python implementations and the documentation:
 
     <project_dir>/run-docker-tests
 

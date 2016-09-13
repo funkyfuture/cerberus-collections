@@ -18,7 +18,8 @@ setup(
     name='cerberus-collections',
     version=CERBERUS_VERSION.split('.', 1)[0] + '.2016.09-a1',
     packages=['cerberus_collections'],
-    url='https://github.com/funkyfuture/cerberus-collections',
+    url='https://cerberus-collections.readthedocs.io/en/latest/',
+    bugtrack_url='https://github.com/funkyfuture/cerberus-collections/issues',
     license='ISC',
     platforms=["any"],
     author='Frank Sachsenheim',
@@ -26,7 +27,7 @@ setup(
     description='Extensions for cerberus, a lightweight and extensible data validation library for Python',
     long_description=open('README.rst').read(),
     install_requires=requirements,
-    keywords=['validation', 'schema', 'xml'],
+    keywords=['validation', 'schema', 'json', 'xml'],
     classifiers=[
         'Development Status :: 3 - Alpha',
         'Intended Audience :: Developers',
@@ -37,6 +38,6 @@ setup(
         'Programming Language :: Python :: 3.4',
         'Programming Language :: Python :: 3.5',
         'Programming Language :: Python :: Implementation :: CPython',
-        'Programming Language :: Python :: Implementation :: PyPy'
+#        'Programming Language :: Python :: Implementation :: PyPy'
     ]
 )
